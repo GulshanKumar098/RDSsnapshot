@@ -1,0 +1,170 @@
+#####################################
+Parameters:
+#####################################
+  DBSubnetGroup:
+    Description: "Name of an active CloudFormation stack that contains the DB Subnet Group that will be used in this stack"
+    Type: String
+    Default: ""
+
+  DBSnapshotIdentifier:
+    Description: "Optional name or Amazon Resource Name (ARN) of the DB snapshot from which you want to restore (leave blank to create an empty database)"
+    Type: String
+    Default: "arn:aws:rds:us-east-1:713436935773:snapshot:testsnapshot"
+
+  RDSMasterUsername:
+    Description: "The master user name for the DB instance (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
+    Type: String
+    Default: ""
+
+  RDSMasterPassword:
+    Description: "The master password for the DB instance (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
+    Type: String
+    Default: ""
+    NoEcho: true
+
+  DBAllocatedStorage:
+    Description: "The allocated storage size, specified in GB (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
+    Type: Number
+    # Default: ""
+    # MinValue: "30"
+    # MaxValue: "1024"
+
+  DBName:
+    Description: "Name of the database (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
+    Type: String
+    Default: ""
+
+  DeereNetworkRDSPostgreSQL:
+    Type: String
+    Description: "Inbound access on Postgres from Deere internal network"
+    Default: "sg-0f94bd7c9a503e2dc"
+
+  PrivateSubnet0:
+    Type: String
+    Description: "Subnet Id for PrivateSubnet0"
+    Default: "subnet-056fff86d2abede1a"
+
+  PrivateSubnet1:
+    Type: String
+    Description: "Subnet Id for PrivateSubnet1"
+    Default: "subnet-0703eca7f74b3decc"
+
+  Vpc:
+    Type: String
+    Description: "VPC Id"
+    Default: "vpc-0760c450b5e89d880"
+
+Conditions:
+  UseDBSnapshot:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: DBSnapshotIdentifier
+      - '' 
+
+#####################################
+Resources:
+#####################################
+#-------------------- 
+#DB Subnet Group 
+#-------------------- 
+  edodataqualityrdsDBSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: edodataqualityRDS-subnet-group
+      SubnetIds:
+        -
+          Ref: PrivateSubnet0
+        -
+          Ref: PrivateSubnet1
+      Tags:
+        -
+          Key: Name
+          Value: edodataqualityRDS-subnet-group
+        -
+          Key: component
+          Value: ae-collibra-dq
+#--------------------------
+#DB Parameter Group
+#--------------------------
+  edodataqualityrdsDBParamGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Parameters:
+        log_connections: 1
+        log_disconnections: 1
+        log_statement: none
+        log_duration: 0
+        log_min_duration_statement: 100
+        log_hostname: 0
+        log_lock_waits: 1
+        track_activities: 1
+        track_counts: 1
+        track_functions: all
+        track_io_timing: 1
+      Description: DB Parameter Group for aurora-postgresql10 RDS Instances
+      Family: postgres13
+      Tags:
+        -
+          Key: Name
+          Value: edqdataqualityRDS-dbparam-group
+        -
+          Key: component
+          Value: ae-collibra-dq
+#--------------------- 
+# DB Instance 
+#--------------------- 
+  edodataqualityrdsPrimaryInst:
+    DeletionPolicy: Snapshot # default
+    UpdateReplacePolicy: Snapshot
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      AllocatedStorage: !If [UseDBSnapshot, !Ref 'AWS::NoValue', !Ref DBAllocatedStorage]
+      AllowMajorVersionUpgrade: False
+      AutoMinorVersionUpgrade:  True
+      BackupRetentionPeriod: 7
+      CopyTagsToSnapshot: true
+      DBInstanceClass: db.m6g.large
+      DBName: !If [UseDBSnapshot, !Ref 'AWS::NoValue', !Ref DBName]
+      DBParameterGroupName:
+        Ref: edodataqualityrdsDBParamGroup
+      DBSnapshotIdentifier: !If [UseDBSnapshot, !Ref DBSnapshotIdentifier, !Ref 'AWS::NoValue']
+      DBSubnetGroupName:
+        Ref: edodataqualityrdsDBSubnetGroup
+      EnableIAMDatabaseAuthentication: False
+      Engine: postgres
+      EngineVersion: 13.4
+      #KmsKeyId: arn:aws:kms:us-east-1:713436935773:key/6da02842-a14e-4db5-a786-e579f468ca6d
+      MasterUsername: 
+        Fn::If:
+        - UseDBSnapshot
+        - Ref: "AWS::NoValue"
+        - Ref: RDSMasterUsername
+     
+      MasterUserPassword:
+        Fn::If:
+        - UseDBSnapshot
+        - Ref: "AWS::NoValue"
+        - Ref: RDSMasterPassword
+
+
+      MultiAZ: False      
+      PreferredMaintenanceWindow: Sun:10:00-Sun:10:30
+      PreferredBackupWindow: 23:00-23:30
+      PubliclyAccessible: False
+      StorageEncrypted: True
+      StorageType: gp2
+      
+      VPCSecurityGroups:
+      - Ref: DeereNetworkRDSPostgreSQL
+
+      DeletionProtection: True
+      DBInstanceIdentifier: !Ref edodataqualityrdsPrimaryInst
+      Tags:
+        -
+          Key: Name
+          Value: edo-dataquality-rds
+        -
+          Key: component
+          Value: ae-collibra-dq
+      #Port: 5432
+      #EngineMode: provisioned

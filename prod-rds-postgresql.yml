@@ -1,0 +1,329 @@
+#####################################
+Parameters:
+#####################################
+  DBSubnetGroup:
+    Description: Name of an active CloudFormation stack that contains the DB Subnet Group that will be used in this stack.
+    Type: String
+    Default: ""
+
+
+  RDSMasterUsername:
+    Type: String
+    Description: "RDS Master Database UserName"
+    Default: "collibradq"
+  RDSMasterPassword:
+    Type: String
+    Description: "RDS Master Database UserPassword"
+    Default: "collibradq!1357"
+    NoEcho: true
+
+#################################### need to put subnet here ###################################
+  DeereNetworkRDSPostgreSQL:
+    Type: String
+    Description: "Inbound access on Postgres from Deere internal network"
+    Default: "subnet-0d11435c972c2e33c	"
+##############################################################################################
+  DBClusterParamGroup:
+    Description: Name of an active CloudFormation stack that contains the DB Cluster Parameter group that will be used in this stack.
+    Type: String
+    Default: "edodqdbclusterparametergroup"
+    MinLength: 1
+    MaxLength: 255
+
+  DBParamGroup:
+    Description: Name of an active CloudFormation stack that contains the DB Parameter group that will be used in this stack.
+    Type: String
+    Default: "edodqdbparamgroup"
+    MinLength: 1
+    MaxLength: 255
+
+
+#####################################################################
+  DBSnapshotIdentifier:
+    Description: Name of the snapshot from which you want to build or restore this Aurora stack.
+    Type: String
+    Default: ""
+#######################################################################
+
+
+
+#############################################################
+  PrivateSubnet0:
+    Type: String
+    Description: "Subnet Id for PrivateSubnet0"
+    Default: "subnet-05b0ec68dcbede1c9"
+
+  PrivateSubnet1:
+    Type: String
+    Description: "Subnet Id for PrivateSubnet1"
+    Default: "subnet-0d54ce2ecfac3c2c8"
+
+  Vpc:
+    Type: String
+    Description: "VPC Id"
+    Default: "vpc-0ca06dc3c44bd5880"
+Conditions:
+  UseDBSnapshot:
+    Fn::Not:
+    - Fn::Equals:
+      - Ref: DBSnapshotIdentifier
+      - '' 
+
+##################################################################
+#####################################
+Resources:
+#####################################
+#-------------------- 
+#DB Subnet Group 
+#-------------------- 
+  edodataqualityrdsDBSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties:
+      DBSubnetGroupDescription: edodataqualityRDS-subnet-group
+      SubnetIds:
+        -
+          Ref: PrivateSubnet0
+        -
+          Ref: PrivateSubnet1
+      Tags:
+        -
+          Key: Name
+          Value: edodataqualityRDS-subnet-group
+        -
+          Key: component
+          Value: ae-collibra-dq
+#--------------------
+#DB Cluster Parameter Group
+#--------------------
+  edodataqualityrdsDBClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Parameters:
+        wal_buffers: 2048
+        autovacuum_vacuum_scale_factor: 0.1
+        autovacuum_analyze_scale_factor: 0.1
+        autovacuum_vacuum_cost_delay: 10
+        autovacuum_max_workers: GREATEST({DBInstanceClassMemory/64371566592},3)
+        autovacuum_vacuum_cost_limit: 4800
+        log_autovacuum_min_duration: 1000
+        effective_cache_size: SUM({DBInstanceClassMemory/12038},-50003)
+      Description: Cluster Parameter Group for database
+      Family: postgres13
+      Tags:
+        -
+          Key: Name
+          Value: edodataqualityrdsclusterparam-group
+        -
+          Key: component
+          Value: ae-collibra-dq
+#--------------------------
+#DB Parameter Group
+#--------------------------
+  edodataqualityrdsDBParamGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Parameters:
+        log_connections: 1
+        log_disconnections: 1
+        log_statement: none
+        log_duration: 0
+        log_min_duration_statement: 100
+        log_hostname: 0
+        log_lock_waits: 1
+        track_activities: 1
+        track_counts: 1
+        track_functions: all
+        track_io_timing: 1
+      Description: DB Parameter Group for aurora-postgresql10 RDS Instances
+      Family: postgres13
+      Tags:
+        -
+          Key: Name
+          Value: edqdataqualityRDS-dbparam-group
+        -
+          Key: component
+          Value: ae-collibra-dq
+#--------------------
+#DB cluster
+#--------------------
+  edodataqualityrdsCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: postgres
+      EngineVersion: 13.4
+      DBClusterParameterGroupName:
+        Ref: edodataqualityrdsDBClusterParameterGroup
+      Tags:
+        -
+          Key: Name
+          Value: edodataqualityRDS-cluster
+        -   
+          Key: component
+          Value: ae-collibra-dq
+      MasterUsername: 
+        Fn::If:
+        - UseDBSnapshot
+        - Ref: "AWS::NoValue"
+        - Ref: RDSMasterUsername
+      VpcSecurityGroupIds:
+      - Ref: DeereNetworkRDSPostgreSQL
+      MasterUserPassword:
+        Fn::If:
+        - UseDBSnapshot
+        - Ref: "AWS::NoValue"
+        - Ref: RDSMasterPassword
+      PreferredBackupWindow: 23:00-23:30
+      DeletionProtection: True
+      KmsKeyId: arn:aws:kms:us-east-1:188549407646:key/9b219efe-5cf2-4d46-8576-199569fd98fe
+      StorageEncrypted: True
+      DatabaseName: edodqprod
+      Port: 5432
+      DBSubnetGroupName:
+        Ref: edodataqualityrdsDBSubnetGroup
+      BackupRetentionPeriod: 30
+      PreferredMaintenanceWindow: Sun:10:00-Sun:10:30
+      EngineMode: provisioned
+      SnapshotIdentifier: 
+        Fn::If:
+        - UseDBSnapshot
+        - Ref: DBSnapshotIdentifier
+        - Ref: "AWS::NoValue"
+    DeletionPolicy: Snapshot
+#--------------------- 
+# DB Instance 
+#--------------------- 
+  edodataqualityrdsPrimaryInst:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      EngineVersion: 13.4
+      DBParameterGroupName:
+        Ref: edodataqualityrdsDBParamGroup
+      DBClusterIdentifier:
+        Ref: edodataqualityrdsCluster
+      AllowMajorVersionUpgrade: False
+      AutoMinorVersionUpgrade:  True
+      Tags:
+        -
+          Key: Name
+          Value: edo-dataquality-rds
+        -
+          Key: component
+          Value: ae-collibra-dq
+      PreferredMaintenanceWindow: Sun:10:00-Sun:10:30
+      PubliclyAccessible: False
+      CopyTagsToSnapshot: True
+      AllocatedStorage: 25
+      StorageType: gp2
+      DBSubnetGroupName:
+        Ref: edodataqualityrdsDBSubnetGroup
+      DBInstanceClass: db.m6g.large
+      DBInstanceIdentifier: edo-dataquality-rds
+#-------------------- 
+#DNS 
+#-------------------- 
+  
+#----------------------------------------------------------------------
+###Create SNS Topic & Subscroption#####
+#----------------------------------------------------------------------
+  edodataqualityrdsSNS:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      DisplayName:  "edodataqualityrdsSNS"
+      Subscription: [  {
+                          Protocol: "email",
+                          Endpoint: gulshan.no48@gmail.com
+                        }
+                    ]
+      TopicName: edodataqualityrds-RDSNotificationsTopic
+#----------------------------------------------------------------------
+###Create SNS Topic & Subscription#####
+#----------------------------------------------------------------------
+  edodataqualityrdsPrimaryInstCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: mdmdealerrds-prod
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Unit: Percent
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value:
+            Ref: edodataqualityrdsPrimaryInst
+      AlarmActions:
+        - Ref: edodataqualityrdsSNS
+      InsufficientDataActions:
+        - Ref: edodataqualityrdsSNS
+
+  edodataqualityrdsPrimaryInstMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: mdmdealerrds-prod
+      Namespace: AWS/RDS
+      MetricName: FreeableMemory
+      Unit: Bytes
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 3221225472
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value:
+            Ref: edodataqualityrdsPrimaryInst
+      AlarmActions:
+        - Ref: edodataqualityrdsSNS
+        #- arn:
+      InsufficientDataActions:
+        - Ref: edodataqualityrdsSNS
+
+  edodataqualityrdsPrimaryTransactionWrapAroundAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: mdmdealerrds-prod
+      Namespace: AWS/RDS
+      MetricName: MaximumUsedTransactionIDs
+      Unit: Count
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 1000000000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value:
+            Ref: edodataqualityrdsPrimaryInst
+      AlarmActions:
+        - !Ref edodataqualityrdsSNS
+        #- arn:aws:sns:us-east-1:188549407646:edo-dataquality-rds-notification
+      InsufficientDataActions:
+        - Ref: edodataqualityrdsSNS
+ 
+  edodataqualityrdsEventSubscription: 
+    Type: "AWS::RDS::EventSubscription"
+    Properties: 
+      EventCategories: 
+        - "configuration change"
+        - "failure"
+        - "deletion"
+        - "availability"
+        - "backup"
+        - "failover"
+        - "maintenance"
+        - "notification"
+        - "read replica"
+        - "recovery"
+        - "low storage"
+      SnsTopicArn:
+        Ref: edodataqualityrdsSNS
+      SourceIds: 
+        - Ref: "edodataqualityrdsPrimaryInst"
+        
+      SourceType: "db-instance"
+      Enabled: true
+    DependsOn: edodataqualityrdsSNS

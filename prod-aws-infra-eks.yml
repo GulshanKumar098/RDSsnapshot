@@ -1,0 +1,150 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "AWS CloudFormation Devl Collibra DQ AWS Infra"
+
+
+Parameters:
+
+  env:
+    Type: String
+    Description: Deployment Environment
+    Default: "prod"
+  
+  awsAcct:
+    Type: String
+    Description: "AWS Account Number"
+    Default: "188549407646"
+  
+  componentValue:
+    Type: String
+    Default: "ae-collibra-dq"
+  
+  clusterName:
+    Type: String
+    Default: "collibradq-eks-cluster"
+  
+  privateSubnet0:
+    Type: String
+    Default: "subnet-0b5e8b6ffb39cf3e6"
+  
+  privateSubnet1:
+    Type: String
+    Default: "subnet-0d95d00597b90834b"
+  
+  privateSubnet2:
+    Type: String
+    Default: "subnet-0cb00f9e3e61d933b"
+  
+  privateSubnet3:
+    Type: String
+    Default: "subnet-055f039e977926f20"
+  
+  privateSubnet4:
+    Type: String
+    Default: "subnet-004e50bccc2cc7d53"
+  
+  privateSubnet5:
+    Type: String
+    Default: "subnet-0276b0b709706bde1"
+
+
+Resources:
+
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "key for dq eks"
+      EnableKeyRotation: True
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "default"
+        Statement:
+          - Sid: "Key Owner" # root access
+            Effect: "Allow"
+            Principal:
+              "AWS": !Join [":", ["arn:aws:iam:" , !Ref awsAcct , "root"]]
+            Action: "kms:*"
+            Resource: "*"
+      Tags:
+        - Key: "Name"
+          Value: !Join [ "-", [ !Ref env , "dq-eks-key" ] ]
+        - Key: "component"
+          Value: !Ref componentValue
+
+  KeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Join [ "", [ "alias/" , !Ref env , "-dq-eks-key" ] ]
+      TargetKeyId:
+        !Ref KMSKey            
+
+  EKSCluster:
+    Type: AWS::EKS::Cluster
+    DependsOn:
+      - KMSKey
+      - KeyAlias
+    Properties:
+      Name: !Join [ "-", [ !Ref env , !Ref clusterName ] ]
+      Version: "1.21"
+      RoleArn: !Join [":", ["arn:aws:iam:" , !Ref awsAcct , "role/eksClusterRole"]]
+      Logging:
+        ClusterLogging:
+          EnabledTypes:
+            - Type: audit
+            - Type: api
+            - Type: authenticator
+            - Type: controllerManager
+            - Type: scheduler
+      ResourcesVpcConfig:
+        EndpointPrivateAccess: true
+        EndpointPublicAccess: true
+        SubnetIds:
+          - !Ref privateSubnet0
+          - !Ref privateSubnet1
+          - !Ref privateSubnet2
+          - !Ref privateSubnet3
+          - !Ref privateSubnet4
+          - !Ref privateSubnet5
+      EncryptionConfig:
+        - Provider:
+            KeyArn: !GetAtt KMSKey.Arn
+          Resources: 
+            - "secrets"
+
+      Tags:
+        - Key: "Name"
+          Value: !Join [ "-", [ !Ref env , !Ref clusterName ] ]
+        - Key: "component"
+          Value: !Ref componentValue
+
+
+  EKSNodeGroup:
+    Type: AWS::EKS::Nodegroup
+    DependsOn:
+      - EKSCluster
+    Properties:
+      NodegroupName: !Join [ "-", [ !Ref env , !Ref clusterName , "node-group" ] ]
+      ClusterName: !Join [ "-", [ !Ref env , !Ref clusterName ] ]
+      AmiType: AL2_x86_64
+      CapacityType: ON_DEMAND
+      DiskSize: 200
+      ForceUpdateEnabled: false
+      InstanceTypes:
+      - r6i.4xlarge
+      NodeRole: !Join [":", ["arn:aws:iam:" , !Ref awsAcct , "role/eks-node-instance-role"]]
+      ScalingConfig:
+        DesiredSize: 2
+        MaxSize: 40
+        MinSize: 2
+      Subnets:
+        - !Ref privateSubnet0
+        - !Ref privateSubnet1
+        - !Ref privateSubnet2
+        - !Ref privateSubnet3
+        - !Ref privateSubnet4
+        - !Ref privateSubnet5
+      UpdateConfig:
+        MaxUnavailablePercentage: 50
+      Tags: 
+        Name: !Join [ "-", [ !Ref env , !Ref clusterName ] ]
+        component: !Ref componentValue
+        
