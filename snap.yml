@@ -24,7 +24,7 @@ Parameters:
 
   DBAllocatedStorage:
     Description: "The allocated storage size, specified in GB (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
-    Type: Number
+    #Type: Number
     # Default: ""
     # MinValue: "30"
     # MaxValue: "1024"
