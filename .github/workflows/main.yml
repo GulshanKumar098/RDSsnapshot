@@ -54,6 +54,6 @@ jobs:
 
     - name: run-ecr 
       run: |
-       snapshot=`aws rds describe-db-snapshots --query "DBSnapshots[?SnapshotType=='automated'].[DBSnapshotArn]"  --output text`   
+       snapshot=`aws rds describe-db-snapshots --query "DBSnapshots[?SnapshotType=='manual'].[DBSnapshotArn]"  --output text`   
        echo $snapshot
-       aws cloudformation deploy --stack-name dq-stack --template-file aws-infra-ecr.yml --parameter-overrides DBSnapshotIdentifier=$snapshot   
+       aws cloudformation deploy --stack-name dq-stack --template-file snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot   
