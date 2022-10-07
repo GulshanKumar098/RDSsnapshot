@@ -22,12 +22,12 @@ Parameters:
     Default: ""
     NoEcho: true
 
-  DBAllocatedStorage:
-    Description: "The allocated storage size, specified in GB (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
-    Type: Number
-    # Default: ""
-    # MinValue: "30"
-    # MaxValue: "1024"
+  # DBAllocatedStorage:
+  #   Description: "The allocated storage size, specified in GB (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
+  #   Type: Number
+  #   # Default: ""
+  #   # MinValue: "30"
+  #   # MaxValue: "1024"
 
   DBName:
     Description: "Name of the database (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
@@ -118,7 +118,7 @@ Resources:
     UpdateReplacePolicy: Snapshot
     Type: 'AWS::RDS::DBInstance'
     Properties:
-      AllocatedStorage: !If [UseDBSnapshot, !Ref 'AWS::NoValue', !Ref DBAllocatedStorage]
+      #AllocatedStorage: !If [UseDBSnapshot, !Ref 'AWS::NoValue', !Ref DBAllocatedStorage]
       AllowMajorVersionUpgrade: False
       AutoMinorVersionUpgrade:  True
       BackupRetentionPeriod: 7
