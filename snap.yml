@@ -9,7 +9,7 @@ Parameters:
   DBSnapshotIdentifier:
     Description: "Optional name or Amazon Resource Name (ARN) of the DB snapshot from which you want to restore (leave blank to create an empty database)"
     Type: String
-    Default: "arn:aws:rds:us-east-1:713436935773:snapshot:testsnapshot"
+    Default: ""
 
   RDSMasterUsername:
     Description: "The master user name for the DB instance (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
@@ -24,7 +24,7 @@ Parameters:
 
   DBAllocatedStorage:
     Description: "The allocated storage size, specified in GB (ignored when DBSnapshotIdentifier is set, value used from snapshot)"
-    #Type: Number
+    Type: Number
     # Default: ""
     # MinValue: "30"
     # MaxValue: "1024"
@@ -158,7 +158,7 @@ Resources:
       - Ref: DeereNetworkRDSPostgreSQL
 
       DeletionProtection: True
-      DBInstanceIdentifier: !Ref edodataqualityrdsPrimaryInst
+      DBInstanceIdentifier: restoreddbinstance
       Tags:
         -
           Key: Name
