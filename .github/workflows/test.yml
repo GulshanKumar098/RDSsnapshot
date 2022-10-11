@@ -39,7 +39,7 @@ jobs:
     - name: "Deploying the snapshot1"
       if: ${{ github.event.inputs.SnapshotArns == 'Snapshot1' }}
       run: |
-       snapshot1=snapshot1=`aws rds describe-db-snapshots --db-instance-identifier=database-1 --snapshot-type=manual --query="max_by(DBSnapshots, &SnapshotCreateTime).DBSnapshotArn" --output text`
+       snapshot1=`aws rds describe-db-snapshots --db-instance-identifier=database-1 --snapshot-type=manual --query="max_by(DBSnapshots, &SnapshotCreateTime).DBSnapshotArn" --output text`
        echo $snapshot1
        aws cloudformation deploy --stack-name dq-stack --template-file snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot1   
 
