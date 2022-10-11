@@ -12,6 +12,7 @@ on:
          - Snapshot1
          - Snapshot2
          - Snapshot3
+         - Snapshot4
 
 jobs:
   Deploy:
@@ -39,17 +40,30 @@ jobs:
     - name: "Deploying the snapshot1"
       if: ${{ github.event.inputs.SnapshotArns == 'Snapshot1' }}
       run: |
-       snapshot1=`aws rds describe-db-snapshots --db-instance-identifier=database-1 --snapshot-type=manual --query="max_by(DBSnapshots, &SnapshotCreateTime).DBSnapshotArn" --output text`
+       snapshot1=`aws rds describe-db-snapshots --snapshot-type=manual --query "sort_by(DBSnapshots, &SnapshotCreateTime)[-1].DBSnapshotArn" --output text`
        echo $snapshot1
        aws cloudformation deploy --stack-name dq-stack --template-file snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot1   
+       
+    - name: "Deploying the snapshot1"
+      if: ${{ github.event.inputs.SnapshotArns == 'Snapshot2' }}
+      run: |
+       snapshot2=`aws rds describe-db-snapshots --snapshot-type=manual --query "sort_by(DBSnapshots, &SnapshotCreateTime)[-2].DBSnapshotArn" --output text`
+       echo $snapshot2
+       aws cloudformation deploy --stack-name dq-stack --template-file snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot2
 
     - name: "deploying the snaphot3"
       if: ${{ github.event.inputs.SnapshotArns == 'Snapshot3' }}
       run: |
-       snapshot3=`aws rds describe-db-snapshots --db-instance-identifier=database-1 --snapshot-type=manual --query="min_by(DBSnapshots, &SnapshotCreateTime).DBSnapshotArn" --output text`  
+       snapshot3=`aws rds describe-db-snapshots --db-instance-identifier=database-1 --snapshot-type=manual --query="sort_by(DBSnapshots, &SnapshotCreateTime)[-3].DBSnapshotArn" --output text`  
        echo $snapshot3
        aws cloudformation deploy --stack-name dq-stack --template-file snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot3
-
+   
+    - name: "Deploying the snapshot4"
+      if: ${{ github.event.inputs.SnapshotArns == 'Snapshot4' }}
+      run: |
+       snapshot4=`aws rds describe-db-snapshots --snapshot-type=manual --query "sort_by(DBSnapshots, &SnapshotCreateTime)[-4].DBSnapshotArn" --output text`
+       echo $snapshot4
+       aws cloudformation deploy --stack-name dq-stack --template-file snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot4
    
 
        
