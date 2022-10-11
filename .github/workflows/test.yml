@@ -1,5 +1,5 @@
 
-name: restoring
+name: selecting snap
 on:
   workflow_dispatch:
     inputs:
