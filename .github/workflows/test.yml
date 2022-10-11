@@ -43,8 +43,8 @@ jobs:
        echo $snapshot1
        aws cloudformation deploy --stack-name dq-stack --template-file snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot1   
 
-    - name: "deploying the snaphot2"
-      if: ${{ github.event.inputs.SnapshotArns == 'Snapshot2' }}
+    - name: "deploying the snaphot3"
+      if: ${{ github.event.inputs.SnapshotArns == 'Snapshot3' }}
       run: |
        snapshot3=`aws rds describe-db-snapshots --db-instance-identifier=database-1 --snapshot-type=manual --query="min_by(DBSnapshots, &SnapshotCreateTime).DBSnapshotArn" --output text`  
        echo $snapshot3
