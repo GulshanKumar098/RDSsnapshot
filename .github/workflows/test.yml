@@ -29,6 +29,8 @@ jobs:
     #this is for control the deployment via approval method 1
     # alrerady craeted env with name dev in github setings 
     #environment: Infra
+    env:
+      db-instance-identifier: database-1
 
     
     steps:
@@ -75,7 +77,7 @@ jobs:
     - name: "deploying the snaphot3"
       if: ${{ github.event.inputs.SnapshotArns == 'Snapshot3' }}
       run: |
-       snapshot3=`aws rds describe-db-snapshots --db-instance-identifier=database-1 --snapshot-type=manual --query="sort_by(DBSnapshots, &SnapshotCreateTime)[-3].DBSnapshotArn" --output text`  
+       snapshot3=`aws rds describe-db-snapshots --db-instance-identifier=$db-instance-identifier --snapshot-type=manual --query="sort_by(DBSnapshots, &SnapshotCreateTime)[-3].DBSnapshotArn" --output text`  
        echo $snapshot3
        aws cloudformation deploy --stack-name dq-stack-${{ env.ENVIRONMENT }} --template-file ${{ env.ENVIRONMENT }}-snap.yml --parameter-overrides DBSnapshotIdentifier=$snapshot3
    
