@@ -37,22 +37,22 @@ Parameters:
   DeereNetworkRDSPostgreSQL:
     Type: String
     Description: "Inbound access on Postgres from Deere internal network"
-    Default: "sg-0f94bd7c9a503e2dc"
+    Default: "sg-0ddf7dda34bd70ae0"
 
   PrivateSubnet0:
     Type: String
     Description: "Subnet Id for PrivateSubnet0"
-    Default: "subnet-056fff86d2abede1a"
+    Default: "subnet-086483f4b3136956e"
 
   PrivateSubnet1:
     Type: String
     Description: "Subnet Id for PrivateSubnet1"
-    Default: "subnet-0703eca7f74b3decc"
+    Default: "subnet-0169ddd95136747dd"
 
   Vpc:
     Type: String
     Description: "VPC Id"
-    Default: "vpc-0760c450b5e89d880"
+    Default: "vpc-0ff1d0fff13015a15"
 
 Conditions:
   UseDBSnapshot:
