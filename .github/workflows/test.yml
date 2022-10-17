@@ -13,7 +13,7 @@ on:
          - prod
          
       SnapshotArns:
-        description: 'select the snapshots ARN'
+        description: 'select the snapshots Snapshot1 is the most recent snapshot, and all other snapshots are given in order of when they were created. The oldest snapshot is seven.'
         default: 'Snapshot1'
         required: true
         type: choice
