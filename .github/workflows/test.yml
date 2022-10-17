@@ -14,9 +14,7 @@ on:
          
       SnapshotArns:
       
-        description: "select the snapshots\n  select the snapshots\n                \nmany spaces above\n","select the snapshots\nmany spaces above"
-        default: 'Snapshot1'
-        required: true
+        description: "select the snapshots\n  select the snapshots\n \nmany spaces above\n
         type: choice
         options:
          - Snapshot1
