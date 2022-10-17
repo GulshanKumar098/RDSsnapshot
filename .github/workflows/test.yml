@@ -14,7 +14,13 @@ on:
          
       SnapshotArns:
       
-        description: "select the snapshots\n           \nselect the snapshots\n \nmany spaces above\n"
+        description: > 
+          select the snapshots.
+          Snapshot1 is the most recent snapshot, and all other snapshots are given in order of when they were created. 
+          The oldest snapshot is seven.
+        
+  
+
         type: choice
         options:
          - Snapshot1
