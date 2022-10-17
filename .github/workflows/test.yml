@@ -14,7 +14,7 @@ on:
          
       SnapshotArns:
       
-        description: "select the snapshots\n \nselect the snapshots\n \nmany spaces above\n"
+        description: "select the snapshots\n           \nselect the snapshots\n \nmany spaces above\n"
         type: choice
         options:
          - Snapshot1
